@@ -1,0 +1,12 @@
+{
+  "name": "finder-location-tracker",
+  "version": "1.0.0",
+  "description": "FINDER – Live Geolocation Tracker with network sync",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

@@ -3,62 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phone Tracker — Dashboard</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <title>PhoneTrace — Live Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
+  <!-- Google Map fills the screen -->
   <div id="map"></div>
 
-  <!-- Top bar -->
-  <div id="topbar">
-    <div id="topbar-left">
-      <span id="logo">📡 Phone Tracker</span>
-      <span id="device-count">0 devices online</span>
+  <!-- ── TOP BAR ── -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="10" r="3"/>
+            <path d="M12 2C8.13 2 5 5.13 5 10c0 5.25 7 12 7 12s7-6.75 7-12c0-4.87-3.13-8-7-8z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">PhoneTrace</div>
+          <div class="brand-sub">Live GPS Dashboard</div>
+        </div>
+      </div>
+      <div id="device-count-pill">
+        <span class="pulse-dot"></span>
+        <span id="device-count">0 devices online</span>
+      </div>
     </div>
-    <button id="btn-share">🔗 Get Tracking Link</button>
-  </div>
+    <div class="topbar-right">
+      <button id="btn-share" class="btn-share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+        </svg>
+        Share Tracking Link
+      </button>
+    </div>
+  </header>
 
-  <!-- Device list panel -->
-  <div id="device-panel">
-    <div id="device-panel-title">Tracked Devices</div>
+  <!-- ── DEVICE LIST SIDEBAR ── -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <span>Tracked Devices</span>
+      <span id="sidebar-count" class="count-badge">0</span>
+    </div>
     <div id="device-list">
-      <p class="empty-msg">No devices connected yet.<br>Share the tracking link with a phone.</p>
+      <div class="empty-state">
+        <div class="empty-icon">📱</div>
+        <div class="empty-title">No devices yet</div>
+        <div class="empty-sub">Share the tracking link to start monitoring a phone</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── DEVICE DETAIL CARD ── -->
+  <div id="detail-card" class="hidden">
+    <div class="card-header">
+      <div class="card-device-icon" id="card-icon">📱</div>
+      <div>
+        <div id="detail-name" class="card-name">—</div>
+        <div id="detail-status" class="card-status">
+          <span class="status-dot active"></span> Live
+        </div>
+      </div>
+      <button id="btn-close-card" class="btn-icon-close">✕</button>
+    </div>
+
+    <div class="card-grid">
+      <div class="card-stat">
+        <div class="card-stat-icon">📍</div>
+        <div>
+          <div class="card-stat-label">Coordinates</div>
+          <div class="card-stat-value" id="d-coords">—</div>
+        </div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-icon">🎯</div>
+        <div>
+          <div class="card-stat-label">Accuracy</div>
+          <div class="card-stat-value" id="d-accuracy">—</div>
+        </div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-icon">🚀</div>
+        <div>
+          <div class="card-stat-label">Speed</div>
+          <div class="card-stat-value" id="d-speed">—</div>
+        </div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-icon">🔋</div>
+        <div>
+          <div class="card-stat-label">Battery</div>
+          <div class="card-stat-value" id="d-battery">—</div>
+        </div>
+      </div>
+      <div class="card-stat full">
+        <div class="card-stat-icon">🕐</div>
+        <div>
+          <div class="card-stat-label">Last Update</div>
+          <div class="card-stat-value" id="d-lastseen">—</div>
+        </div>
+      </div>
+      <div class="card-stat full">
+        <div class="card-stat-icon">📏</div>
+        <div>
+          <div class="card-stat-label">Distance Travelled</div>
+          <div class="card-stat-value" id="d-distance">0 m</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-actions">
+      <button id="btn-focus" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+        </svg>
+        Focus on Map
+      </button>
+      <button id="btn-street-view" class="btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+        </svg>
+        Street View
+      </button>
     </div>
   </div>
 
-  <!-- Selected device detail card -->
-  <div id="detail-card" style="display:none;">
-    <div id="detail-name">—</div>
-    <div id="detail-stats">
-      <div class="ds"><span class="dl">Coordinates</span><span class="dv" id="d-coords">—</span></div>
-      <div class="ds"><span class="dl">Accuracy</span><span class="dv" id="d-accuracy">—</span></div>
-      <div class="ds"><span class="dl">Speed</span><span class="dv" id="d-speed">—</span></div>
-      <div class="ds"><span class="dl">Battery</span><span class="dv" id="d-battery">—</span></div>
-      <div class="ds"><span class="dl">Last seen</span><span class="dv" id="d-lastseen">—</span></div>
-    </div>
-    <button id="btn-focus">🎯 Focus on map</button>
-    <button id="btn-deselect" class="outline">✕ Close</button>
-  </div>
-
-  <!-- Share modal -->
-  <div id="modal-overlay" style="display:none;">
+  <!-- ── SHARE MODAL ── -->
+  <div id="modal-overlay" class="hidden">
     <div id="modal">
-      <div id="modal-title">📲 Share Tracking Link</div>
-      <p id="modal-desc">Send this link to the phone you want to track. When they open it and allow location, they will appear on your map.</p>
-      <div id="modal-link-box">
-        <input id="modal-link" readonly />
+      <div class="modal-header">
+        <div class="modal-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+          </svg>
+        </div>
+        <div>
+          <div class="modal-title">Share Tracking Link</div>
+          <div class="modal-sub">Send to any phone you want to track</div>
+        </div>
+        <button id="btn-modal-close" class="btn-icon-close">✕</button>
+      </div>
+
+      <div class="modal-link-box">
+        <input id="modal-link" readonly placeholder="Loading..."/>
         <button id="btn-copy">Copy</button>
       </div>
-      <div id="qr-code"></div>
-      <p id="modal-note">⚠️ For this to work over mobile data (not just Wi-Fi), deploy the app online. On the same Wi-Fi network it works immediately.</p>
-      <button id="btn-modal-close" class="outline">Close</button>
+
+      <div id="qr-wrap">
+        <div class="qr-label">Or scan with phone camera</div>
+        <div id="qr-code"></div>
+      </div>
+
+      <div class="modal-warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        For tracking over mobile data, deploy this app online (Render / Railway). On same Wi-Fi it works instantly.
+      </div>
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <!-- QR Code lib -->
   <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <!-- 
+    GOOGLE MAPS API KEY
+    Get a free key at: https://console.cloud.google.com
+    Enable "Maps JavaScript API" then paste your key below
+  -->
+  <script>
+    window.GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY';
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

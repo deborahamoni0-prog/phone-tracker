@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phone Tracker — Share My Location</title>
+  <title>PhoneTrace — Share Location</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
   <div id="track-app">
 
     <div id="track-logo">📡</div>
     <h1 id="track-title">Share My Location</h1>
-    <p id="track-subtitle">Your location will be sent to the tracker dashboard in real time.</p>
+    <p id="track-subtitle">Your real-time GPS will be sent to the tracker dashboard. Tap Start and allow location access.</p>
 
     <div id="track-status-row">
       <div id="track-dot"></div>
@@ -20,21 +21,32 @@
     </div>
 
     <div id="track-stats">
-      <div class="tstat"><span class="tl">Coordinates</span><span class="tv" id="t-coords">—</span></div>
-      <div class="tstat"><span class="tl">Accuracy</span><span class="tv" id="t-accuracy">—</span></div>
-      <div class="tstat"><span class="tl">Battery</span><span class="tv" id="t-battery">—</span></div>
-      <div class="tstat"><span class="tl">Pings sent</span><span class="tv" id="t-pings">0</span></div>
+      <div class="tstat">
+        <span class="tl">Coordinates</span>
+        <span class="tv" id="t-coords">—</span>
+      </div>
+      <div class="tstat">
+        <span class="tl">Accuracy</span>
+        <span class="tv" id="t-accuracy">—</span>
+      </div>
+      <div class="tstat">
+        <span class="tl">Battery</span>
+        <span class="tv" id="t-battery">—</span>
+      </div>
+      <div class="tstat">
+        <span class="tl">Pings Sent</span>
+        <span class="tv" id="t-pings">0</span>
+      </div>
     </div>
 
     <div id="track-name-row">
-      <label for="t-name-input">Your device name</label>
-      <input id="t-name-input" type="text" placeholder="e.g. John's iPhone" maxlength="30" />
+      <label for="t-name-input">Device Name</label>
+      <input id="t-name-input" type="text" placeholder="e.g. John's Samsung S24" maxlength="30" />
     </div>
 
-    <button id="btn-track-start">▶ Start Sharing</button>
+    <button id="btn-track-start">▶ Start Sharing Location</button>
 
   </div>
-
   <script src="track.js"></script>
 </body>
 </html>

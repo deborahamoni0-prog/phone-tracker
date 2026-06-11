@@ -2,8 +2,10 @@ services:
   - type: web
     name: phone-tracker
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: node server.js
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: PORT
-        value: 8080
+        value: 10000

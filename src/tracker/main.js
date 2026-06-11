@@ -1,10 +1,50 @@
 // main.js — Tracker (phone) entry point
 // Runs on track.html. Reads GPS, sends pings, updates the UI.
+// (gps.js, battery.js, deviceId.js, sender.js merged in)
 
-import { getDeviceId }  from './deviceId.js';
-import { initBattery }  from './battery.js';
-import { startGPS, stopGPS } from './gps.js';
-import { sendPing }     from './sender.js';
+// ── deviceId ──────────────────────────────────────────────────────────────────
+function getDeviceId() {
+  const KEY = 'phonetrace_device_id';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = 'phone-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
+// ── battery ───────────────────────────────────────────────────────────────────
+async function initBattery(onUpdate) {
+  if (!navigator.getBattery) return;
+  const battery = await navigator.getBattery();
+  onUpdate(Math.round(battery.level * 100));
+  battery.addEventListener('levelchange', () => onUpdate(Math.round(battery.level * 100)));
+}
+
+// ── gps ───────────────────────────────────────────────────────────────────────
+function startGPS(onFix, onError) {
+  if (!navigator.geolocation) { onError({ code: 0 }); return null; }
+  return navigator.geolocation.watchPosition(onFix, onError, {
+    enableHighAccuracy: true,
+    timeout:            20000,
+    maximumAge:         0,
+  });
+}
+
+function stopGPS(watchId) {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+}
+
+// ── sender ────────────────────────────────────────────────────────────────────
+async function sendPing(data) {
+  const res = await fetch('/api/ping', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Server responded ${res.status}`);
+  return res.json();
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -45,7 +85,6 @@ function startTracking() {
   setStatus('waiting', 'Waiting for GPS signal…');
   btnStart.textContent = '⏹ Stop Sharing';
   btnStart.style.background = '#ef4444';
-
   state.watchId = startGPS(onFix, onError);
 }
 
@@ -57,12 +96,11 @@ function stopTracking() {
   setStatus('idle', 'Stopped. Tap Start to resume.');
 }
 
-// ── Called on every GPS position update ──────────────────────────────────────
+// ── GPS position update ───────────────────────────────────────────────────────
 async function onFix(position) {
   const { latitude: lat, longitude: lng, accuracy, speed } = position.coords;
   const name = nameInput.value.trim() || 'Unnamed Device';
 
-  // Update UI immediately
   tCoords.textContent   = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   tAccuracy.textContent = `±${Math.round(accuracy)} m`;
 
@@ -76,7 +114,7 @@ async function onFix(position) {
   }
 }
 
-// ── GPS error handler ─────────────────────────────────────────────────────────
+// ── GPS error ─────────────────────────────────────────────────────────────────
 function onError(err) {
   stopTracking();
   const messages = {

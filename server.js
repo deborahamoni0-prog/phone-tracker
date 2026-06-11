@@ -105,7 +105,10 @@ http.createServer((req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'snapshot', devices: [...devices.values()] })}\n\n`);
 
     dashboardClients.add(res);
-    req.on('close', () => dashboardClients.delete(res));
+
+    // Keepalive: send a comment every 25 s to prevent Render/proxies closing idle SSE
+    const keepalive = setInterval(() => res.write(': keepalive\n\n'), 25_000);
+    req.on('close', () => { clearInterval(keepalive); dashboardClients.delete(res); });
     return;
   }
 

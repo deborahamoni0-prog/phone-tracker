@@ -1,12 +1,19 @@
 {
-  "name": "finder-location-tracker",
+  "name": "phone-trace",
   "version": "1.0.0",
-  "description": "FINDER – Live Geolocation Tracker with network sync",
-  "main": "server.js",
+  "description": "PhoneTrace — Real-time multi-device GPS tracker",
+  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "dev":     "concurrently \"node server.js\" \"vite\"",
+    "build":   "vite build",
+    "preview": "vite preview",
+    "start":   "node server.js"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "concurrently": "^8.2.2"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   }
 }

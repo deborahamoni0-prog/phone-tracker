@@ -1,49 +1,68 @@
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
+// server.js
+// Node.js HTTP server — handles the API and serves static files.
+// In dev:  Vite runs on :5173, this runs on :8080. Vite proxies /api → here.
+// In prod: run `npm run build` first, then `npm start`. Server serves /dist.
 
-const PORT = process.env.PORT || 8080;
+import http from 'http';
+import fs   from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// In-memory store of all active devices
-// key: deviceId, value: { deviceId, name, lat, lng, accuracy, speed, battery, lastSeen }
-const devices = new Map();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT      = process.env.PORT || 8080;
 
-// All dashboard SSE clients waiting for updates
+// In production Vite outputs to /dist, in dev we serve root files directly
+const isDev     = process.env.NODE_ENV !== 'production';
+const STATIC    = isDev ? __dirname : path.join(__dirname, 'dist');
+
+// ── In-memory device store ────────────────────────────────────────────────────
+// key: deviceId → value: { deviceId, name, lat, lng, accuracy, speed, battery, lastSeen }
+const devices         = new Map();
 const dashboardClients = new Set();
 
-// Remove a device if it hasn't sent a ping in 60 seconds
+// Remove devices that haven't pinged in 60 seconds (checked every 10 s)
 setInterval(() => {
-  const cutoff = Date.now() - 60000;
+  const cutoff = Date.now() - 60_000;
   for (const [id, device] of devices.entries()) {
     if (device.lastSeen < cutoff) {
       devices.delete(id);
       broadcast({ type: 'device_removed', deviceId: id });
-      console.log(`[removed] ${device.name} went offline`);
+      console.log(`[offline] ${device.name}`);
     }
   }
-}, 10000);
+}, 10_000);
 
-// Send a JSON event to every connected dashboard
+// Send a message to every connected dashboard browser tab
 function broadcast(data) {
   const msg = `data: ${JSON.stringify(data)}\n\n`;
-  for (const client of dashboardClients) {
-    client.write(msg);
-  }
+  for (const client of dashboardClients) client.write(msg);
 }
 
+// ── MIME types for static file serving ───────────────────────────────────────
 const MIME = {
   '.html': 'text/html',
   '.css':  'text/css',
   '.js':   'text/javascript',
+  '.json': 'application/json',
+  '.png':  'image/png',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
 };
 
+// ── Request handler ───────────────────────────────────────────────────────────
 http.createServer((req, res) => {
+
+  // Allow requests from Vite dev server (CORS)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
   const url = new URL(req.url, `http://${req.headers.host}`);
 
-  // ── POST /api/ping  — tracked phone sends its location ──────────────────
+  // ── POST /api/ping — phone sends its GPS location ──────────────────────────
   if (url.pathname === '/api/ping' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    req.on('data', chunk => (body += chunk));
     req.on('end', () => {
       try {
         const d = JSON.parse(body);
@@ -53,11 +72,11 @@ http.createServer((req, res) => {
 
         const device = {
           deviceId: d.deviceId,
-          name:     d.name || 'Unknown Device',
+          name:     d.name     || 'Unknown Device',
           lat:      parseFloat(d.lat),
           lng:      parseFloat(d.lng),
-          accuracy: parseFloat(d.accuracy || 0),
-          speed:    d.speed != null ? parseFloat(d.speed) : null,
+          accuracy: parseFloat(d.accuracy  || 0),
+          speed:    d.speed   != null ? parseFloat(d.speed)   : null,
           battery:  d.battery != null ? parseFloat(d.battery) : null,
           lastSeen: Date.now(),
         };
@@ -74,7 +93,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // ── GET /api/stream  — dashboard subscribes to live updates ─────────────
+  // ── GET /api/stream — dashboard opens a live SSE connection ───────────────
   if (url.pathname === '/api/stream') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
@@ -82,23 +101,21 @@ http.createServer((req, res) => {
       'Connection':    'keep-alive',
     });
 
-    // Send current device list immediately on connect
-    const snapshot = { type: 'snapshot', devices: [...devices.values()] };
-    res.write(`data: ${JSON.stringify(snapshot)}\n\n`);
+    // Immediately send the current device list so the dashboard loads fast
+    res.write(`data: ${JSON.stringify({ type: 'snapshot', devices: [...devices.values()] })}\n\n`);
 
     dashboardClients.add(res);
     req.on('close', () => dashboardClients.delete(res));
     return;
   }
 
-  // ── Static files ─────────────────────────────────────────────────────────
-  // /        → index.html  (dashboard)
-  // /track   → track.html  (phone transmitter)
-  const aliases = { '/': 'index.html', '/track': 'track.html' };
-  const fileName = aliases[url.pathname] || url.pathname.slice(1);
-  const filePath = path.join(__dirname, fileName);
+  // ── Static files ───────────────────────────────────────────────────────────
+  const aliases  = { '/': 'index.html', '/track': 'track.html' };
+  const fileName = aliases[url.pathname] ?? url.pathname.slice(1);
+  const filePath = path.join(STATIC, fileName);
 
-  if (!filePath.startsWith(__dirname)) {
+  // Security: prevent directory traversal
+  if (!filePath.startsWith(STATIC)) {
     res.writeHead(403); res.end('Forbidden'); return;
   }
 
@@ -110,5 +127,12 @@ http.createServer((req, res) => {
   });
 
 }).listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`\n🚀 PhoneTrace server running`);
+  console.log(`   API      → http://localhost:${PORT}`);
+  if (isDev) {
+    console.log(`   Dev UI   → http://localhost:5173  (run: npm run dev)`);
+  } else {
+    console.log(`   Dashboard → http://localhost:${PORT}`);
+    console.log(`   Tracker   → http://localhost:${PORT}/track`);
+  }
 });
